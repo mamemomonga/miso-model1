@@ -1,0 +1,3 @@
+*.swp
+/dist
+/etc/config.yaml
