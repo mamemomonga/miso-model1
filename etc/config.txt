@@ -1,8 +1,0 @@
-sudo sh -c 'cat >> /boot/config.txt' << 'EOS'
-dtoverlay=gpio-poweroff,gpiopin=21,active_low="y"
-dtoverlay=gpio-shutdown,gpio_pin=20
-dtparam=audio=on
-gpu_mem=16
-dtparam=spi=on
-EOS
-

@@ -7,6 +7,7 @@ import (
 	"github.com/janne/bcm2835"
 	"sync"
 	"time"
+	"bytes"
 //	"log"
 )
 
@@ -36,6 +37,44 @@ func (this *SpiLedArray) Run() {
 	bcm2835.SpiChipSelect(BCM2835_SPI_CS0)
 	bcm2835.SpiSetChipSelectPolarity(BCM2835_SPI_CS0, LOW)
 
+
+	go func() {
+		led := make([]uint8,2)
+		for {
+			this.m.Lock()
+			if bytes.Compare(led, this.led) == 0 {
+				this.m.Unlock()
+				continue
+			}
+			led = this.led
+			for i:=uint8(0); i<=1; i++ { // 74HC595
+				for j:=uint8(0); j<8; j++ { // Pin
+					pn := j+8*i
+					switch(this.led[pn]) {
+						case 0:
+							this.pin[i] &=^ ( 1 << j )
+						case 1:
+							this.pin[i] |= ( 1 << j )
+						default:
+							if this.counter[pn] == this.led[pn] {
+								this.pin[i] ^= ( 1 << j )
+								this.counter[pn]=0
+							} else {
+								this.counter[pn]++
+							}
+					}
+				}
+			}
+			this.m.Unlock()
+			// バイトオーダを逆にする
+			bcm2835.SpiTransfern( []byte{ reverse8Bit(this.pin[0]), reverse8Bit(this.pin[1]) } )
+			this.m.Unlock()
+			time.Sleep(time.Millisecond * 10)
+		}
+	}()
+
+
+/*
 	pv := make([]uint8,2)
 	go func() {
 		for {
@@ -61,8 +100,7 @@ func (this *SpiLedArray) Run() {
 			this.m.Unlock()
 			if((pv[0] != this.pin[0]) || (pv[1] != this.pin[1])) {
 				this.m.Lock()
-				// log.Print(this.pin[0], this.pin[1])
-				// MSBFirstが効かないのかよくわからないので、バイトオーダを逆にする
+				// バイトオーダを逆にする
 				bcm2835.SpiTransfern( []byte{ reverse8Bit(this.pin[0]), reverse8Bit(this.pin[1]) } )
 				pv[0] = this.pin[0]
 				pv[1] = this.pin[1]
@@ -72,6 +110,8 @@ func (this *SpiLedArray) Run() {
 			time.Sleep(time.Millisecond * 10)
 		}
 	}()
+*/
+
 }
 
 func (this *SpiLedArray) Finalize() {

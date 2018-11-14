@@ -100,6 +100,9 @@ func (this *Hardware) LedAllOff() {
 	this.SLed.AllOff()
 }
 
+
+
+
 func (this *Hardware) SwMissileOn()(ret bool) {
 	if this.PinMissile.Read() == 0 { // 正論理
 		return false
