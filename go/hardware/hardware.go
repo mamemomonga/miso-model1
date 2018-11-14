@@ -75,6 +75,46 @@ func NewHardware()(this *Hardware, err error) {
 	return
 }
 
+func (this *Hardware) LedMissile(v int) {
+	this.SLed.Set(SL_MISSILE,uint8(v))
+}
+func (this *Hardware) LedRun(v int) {
+	this.SLed.Set(SL_RUN,uint8(v))
+}
+func (this *Hardware) LedReady(v int) {
+	this.SLed.Set(SL_READY,uint8(v))
+}
+func (this *Hardware) LedErr(v int) {
+	this.SLed.Set(SL_ERR,uint8(v))
+}
+func (this *Hardware) LedNet(v int) {
+	this.SLed.Set(SL_NET,uint8(v))
+}
+func (this *Hardware) LedApp(v int) {
+	this.SLed.Set(SL_APP,uint8(v))
+}
+func (this *Hardware) LedGauge(k int, v int) {
+	this.SLed.Set(uint8(SL_GAUGE_1-1+k),uint8(v))
+}
+func (this *Hardware) LedAllOff() {
+	this.SLed.AllOff()
+}
+
+func (this *Hardware) SwMissileOn()(ret bool) {
+	if this.PinMissile.Read() == 0 { // 正論理
+		return false
+	} else {
+		return true
+	}
+}
+func (this *Hardware) SwLaunchOn()(ret bool) {
+	if this.PinLaunch.Read() == 0 { // 負論理
+		return true
+	} else {
+		return false
+	}
+}
+
 func (this *Hardware) Aplay(filename string)(err error) {
 	pin := rpio.Pin(G_SPEAKER_AMP)
 	pin.Output()
@@ -97,24 +137,6 @@ func (this *Hardware) SendStateFlag() {
 	pin.Low()
 	time.Sleep(time.Millisecond * 100)
 	pin.Input() // HiZ
-}
-
-func (this *Hardware) Sw_missile_on()(ret bool) {
-	// 正論理
-	if this.PinMissile.Read() == 0 {
-		return false
-	} else {
-		return true
-	}
-}
-
-func (this *Hardware) Sw_launch_on()(ret bool) {
-	// 負論理
-	if this.PinLaunch.Read() == 0 {
-		return true
-	} else {
-		return false
-	}
 }
 
 func (this *Hardware) RotarySelector(retval *int) {

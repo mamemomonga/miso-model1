@@ -5,20 +5,19 @@ import (
 	"time"
 	"fmt"
 	"strings"
-	ha "github.com/mamemomonga/miso-model1/go/hardware"
 	"github.com/mamemomonga/misomiso.exe/go/don"
 )
 
 const ReportInterval = 15
 
 func run() error {
-	hw.SLed.Set(ha.SL_APP, 10)
+	hw.LedApp(10)
 	log.Printf("info: misolauncher VERSION:%s REVISION:%s", Version, Revision)
 
 	aplay("startup-miso");
-	hw.SLed.Set(ha.SL_APP, 1)
+	hw.LedApp(1)
 
-	hw.SLed.Set(ha.SL_NET, 5)
+	hw.LedNet(5)
 	aplay("connecting-mastodon");
 	m,err := NewMisoPunch( Basedir+"/config.yaml" )
 	if err != nil {
@@ -26,8 +25,8 @@ func run() error {
 	}
 	defer m.Finish()
 
-	hw.SLed.Set(ha.SL_APP, 1)
-	hw.SLed.Set(ha.SL_NET, 1)
+	hw.LedApp(1)
+	hw.LedNet(1)
 	aplay("connected");
 
 	// ------------------------------
@@ -46,14 +45,13 @@ func run() error {
 			return err
 		}
 
-		hw.SLed.Set(uint8(ha.SL_RUN), 0)
+		hw.LedRun(0)
 		aplay("finish")
 		time.Sleep(time.Millisecond * 100)
 
-		hw.SLed.AllOff()
-		hw.SLed.Set(ha.SL_APP, 1)
-		hw.SLed.Set(ha.SL_NET, 1)
-
+		hw.LedAllOff()
+		hw.LedApp(1)
+		hw.LedApp(1)
 	}
 
 	return nil
@@ -62,16 +60,16 @@ func run() error {
 func chk_missile_disabled() {
 	log.Print("info: CHK_MISSILE_DISABLED")
 
-	if ! hw.Sw_missile_on() {
+	if ! hw.SwMissileOn() {
 		return
 	}
-	hw.SLed.Set(ha.SL_MISSILE, 10)
-	hw.SLed.Set(ha.SL_ERR, 1)
+	hw.LedMissile(10)
+	hw.LedErr(1)
 	aplay("lockon-already-enable");
 	for {
-		if ! hw.Sw_missile_on() {
-			hw.SLed.Set(ha.SL_MISSILE, 0)
-			hw.SLed.Set(ha.SL_ERR,     0)
+		if ! hw.SwMissileOn() {
+			hw.LedMissile(0)
+			hw.LedErr(0)
 			aplay("lockon-disabled");
 			return
 		}
@@ -85,30 +83,30 @@ func select_missile() {
 
 	hw.RotarySelector(&missile)
 	aplay("select-missile");
-	hw.SLed.Set(ha.SL_MISSILE, 10)
+	hw.LedMissile(10)
 
 	offmode := false
 	for {
 
 		if offmode {
-			if hw.Sw_launch_on() {
-				hw.SLed.Set(ha.SL_APP, 1)
-				hw.SLed.Set(ha.SL_NET, 1)
-				hw.SLed.Set(ha.SL_MISSILE, 10)
-				hw.SLed.Set(uint8(ha.SL_GAUGE_1 + missile), 10)
+			if hw.SwLaunchOn() {
+				hw.LedApp(1)
+				hw.LedNet(1)
+				hw.LedMissile(10)
+				hw.LedGauge(missile, 10)
 				time.Sleep(time.Millisecond * 500)
 				offmode = false
 			}
 		} else {
-			if hw.Sw_launch_on() {
-				hw.SLed.AllOff()
+			if hw.SwLaunchOn() {
+				hw.LedAllOff()
 				offmode = true
 				time.Sleep(time.Millisecond * 500)
 
 			}
 		}
 
-		if hw.Sw_missile_on() {
+		if hw.SwMissileOn() {
 			break
 		}
 
@@ -117,12 +115,12 @@ func select_missile() {
 	hw.Rotary.Stop()
 
 	// せーのっ!
-	if hw.Sw_launch_on() && (missile == 6) {
+	if hw.SwLaunchOn() && (missile == 6) {
 		aplay("seeno");
 	}
 	log.Printf("MISSILE: %d",missile)
 
-	hw.SLed.Set(uint8(ha.SL_GAUGE_1 + missile), 1)
+	hw.LedGauge(missile, 1)
 	time.Sleep(time.Millisecond * 100)
 
 	aplay("missile-type");
@@ -132,32 +130,32 @@ func select_missile() {
 }
 
 func lockon() bool {
-	hw.SLed.Set(ha.SL_MISSILE, 5)
+	hw.LedMissile(5)
 	log.Print("info: lockon")
 
-	if ! hw.Sw_missile_on() {
+	if ! hw.SwMissileOn() {
 		aplay("lockon-disabled");
-		hw.SLed.Set(uint8(ha.SL_GAUGE_1 + missile), 0)
-		hw.SLed.Set(ha.SL_READY, 0)
+		hw.LedGauge(missile, 0)
+		hw.LedReady(0)
 		return false
 	}
-	hw.SLed.Set(ha.SL_MISSILE, 1)
+	hw.LedMissile(1)
 	aplay("lockon");
-	hw.SLed.Set(ha.SL_READY, 10)
+	hw.LedReady(10)
 
 	for {
-		if ! hw.Sw_missile_on() {
+		if ! hw.SwMissileOn() {
 			aplay("lockon-disabled");
-			hw.SLed.Set(uint8(ha.SL_GAUGE_1 + missile), 0)
-			hw.SLed.Set(ha.SL_READY, 0)
+			hw.LedGauge(missile, 0)
+			hw.LedReady(0)
 			return false
 		}
-		if hw.Sw_launch_on() {
-			hw.SLed.Set(uint8(ha.SL_READY), 2)
-			hw.SLed.Set(uint8(ha.SL_RUN), 2)
+		if hw.SwLaunchOn() {
+			hw.LedReady(2)
+			hw.LedRun(2)
 			aplay("launch")
-			hw.SLed.Set(uint8(ha.SL_READY), 1)
-			hw.SLed.Set(uint8(ha.SL_RUN), 20)
+			hw.LedReady(1)
+			hw.LedRun(20)
 			return true
 		}
 		time.Sleep(time.Millisecond * 10)
@@ -229,14 +227,14 @@ func (this *MisoPunch) Run() error {
 				break
 			}
 			// 発射ボタンで追加トゥート
-			if hw.Sw_launch_on() {
+			if hw.SwLaunchOn() {
 				this.d.Toot(fmt.Sprintf("%s #misomiso", this.Keyword))
-				hw.SLed.Set(uint8(ha.SL_READY), 10)
+				hw.LedReady(10)
 				aplay(target_sounds[missile])
-				hw.SLed.Set(uint8(ha.SL_READY), 1)
+				hw.LedReady(1)
 			}
 			// ミサイルスイッチオフで中断
-			if ! hw.Sw_missile_on() {
+			if ! hw.SwMissileOn() {
 				this.l.Abort()
 			}
 			time.Sleep(time.Millisecond * 10)
@@ -257,11 +255,11 @@ func (this *MisoPunch) Finish() {
 
 func (this *MisoPunch) cBoosted() {
 	log.Print("info: 命中")
-	hw.SLed.Set(uint8(ha.SL_RUN), 2)
+	hw.LedRun(2)
 	aplay(target_sounds[missile])
 	aplay("hit")
 	time.Sleep(time.Millisecond * 100)
-	hw.SLed.Set(uint8(ha.SL_RUN), 20)
+	hw.LedRun(20)
 }
 
 func (this *MisoPunch) cReportFinish(r don.LauncherReport) {
