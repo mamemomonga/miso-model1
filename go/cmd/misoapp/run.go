@@ -85,26 +85,25 @@ func select_missile() {
 	aplay("select-missile");
 	hw.LedMissile(10)
 
-	offmode := false
+//	suspend_on := false
+//	suspend := make([]uint8,16)
+
 	for {
 
-		if offmode {
-			if hw.SwLaunchOn() {
-				hw.LedApp(1)
-				hw.LedNet(1)
-				hw.LedMissile(10)
-				hw.LedGauge(missile, 10)
-				time.Sleep(time.Millisecond * 500)
-				offmode = false
-			}
-		} else {
-			if hw.SwLaunchOn() {
-				hw.LedAllOff()
-				offmode = true
-				time.Sleep(time.Millisecond * 500)
-
-			}
-		}
+//		if suspend_on {
+//			if hw.SwLaunchOn() {
+//				hw.SLed.SetAll(suspend)
+//				suspend_on = false
+//				time.Sleep(time.Millisecond * 500)
+//			}
+//		} else {
+//			if hw.SwLaunchOn() {
+//				suspend = hw.SLed.GetAll()
+//				suspend_on = true
+//				hw.LedAllOff()
+//				time.Sleep(time.Millisecond * 500)
+//			}
+//		}
 
 		if hw.SwMissileOn() {
 			break
