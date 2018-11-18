@@ -8,8 +8,6 @@ import (
 	"github.com/mamemomonga/misomiso.exe/go/don"
 )
 
-const ReportInterval = 15
-
 func run() error {
 	hw.LedApp(10)
 	log.Printf("info: misolauncher VERSION:%s REVISION:%s", Version, Revision)
@@ -18,6 +16,7 @@ func run() error {
 	hw.LedApp(1)
 
 	hw.LedNet(5)
+	log.Print("info: CONNECTING MSTDN")
 	aplay("connecting-mastodon");
 	m,err := NewMisoPunch( Basedir+"/config.yaml" )
 	if err != nil {
@@ -27,6 +26,7 @@ func run() error {
 
 	hw.LedApp(1)
 	hw.LedNet(1)
+	log.Print("info: CONNECTED")
 	aplay("connected");
 
 	// ------------------------------
@@ -85,27 +85,10 @@ func select_missile() {
 	aplay("select-missile");
 	hw.LedMissile(10)
 
-//	suspend_on := false
-//	suspend := make([]uint8,16)
-
+	hw.SLed.SleepTimer(10)
 	for {
-
-//		if suspend_on {
-//			if hw.SwLaunchOn() {
-//				hw.SLed.SetAll(suspend)
-//				suspend_on = false
-//				time.Sleep(time.Millisecond * 500)
-//			}
-//		} else {
-//			if hw.SwLaunchOn() {
-//				suspend = hw.SLed.GetAll()
-//				suspend_on = true
-//				hw.LedAllOff()
-//				time.Sleep(time.Millisecond * 500)
-//			}
-//		}
-
 		if hw.SwMissileOn() {
+			hw.SLed.SleepTimer(0)
 			break
 		}
 
@@ -130,7 +113,7 @@ func select_missile() {
 
 func lockon() bool {
 	hw.LedMissile(5)
-	log.Print("info: lockon")
+	log.Print("info: LOCKON")
 
 	if ! hw.SwMissileOn() {
 		aplay("lockon-disabled");

@@ -7,6 +7,8 @@ var (
 	missile  int
 )
 
+const ReportInterval = 15
+
 func init() {
 	missile = 0
 	target_sounds = []string{

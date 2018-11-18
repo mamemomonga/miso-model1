@@ -11,12 +11,11 @@ import (
 )
 
 type SpiLedArray struct {
-	led        []uint8     // LED
-	counter    []uint8     // 点滅用カウンタ
-	pin        []uint8     // ピンの状態
-	m          *sync.Mutex // Mutex
-	sleep_timer   int
-	sleep_counter int
+	led           []uint8     // LED
+	counter       []uint8     // 点滅用カウンタ
+	pin           []uint8     // ピンの状態
+	m             *sync.Mutex // Mutex
+	sleep_timer   uint64
 }
 
 func NewSpiLedArray() (this *SpiLedArray, err error) {
@@ -25,11 +24,7 @@ func NewSpiLedArray() (this *SpiLedArray, err error) {
 	this.led     = make([]uint8, 16)
 	this.counter = make([]uint8, 16)
 	this.pin     = make([]uint8, 8)
-	this.m = new(sync.Mutex)
-
-//	this.sleep_timer = 0
-//	this.sleep_counter = 0
-//	this.sleep = 0
+	this.m       = new(sync.Mutex)
 	return
 }
 
@@ -41,20 +36,6 @@ func (this *SpiLedArray) Run() {
 	bcm2835.SpiSetClockDivider(BCM2835_SPI_CLOCK_DIVIDER_128)
 	bcm2835.SpiChipSelect(BCM2835_SPI_CS0)
 	bcm2835.SpiSetChipSelectPolarity(BCM2835_SPI_CS0, LOW)
-
-/*
-	go func() {
-		this.m.Lock()
-		st = this.sleep_timer
-		sc = this.sleep_counter
-		this.m.Unock()
-		if st > 0 {
-			if sc == st {
-
-		}
-
-	}
-*/
 
 	go func() {
 		pv := make([]uint8,2)
@@ -103,39 +84,8 @@ func (this *SpiLedArray) Set(ledPin uint8, value uint8) {
 	this.m.Unlock()
 }
 
-/*
 func (this *SpiLedArray) SleepTimer(s int) {
-	this.sleep_timer = s
-	this.sleep_counter = 0
 }
-*/
-
-
-
-
-/*
-func (this *SpiLedArray) Get(ledPin uint8) uint8 {
-	this.m.Lock()
-	led := this.led[ledPin]
-	this.m.Unlock()
-	return led
-}
-
-func (this *SpiLedArray) SetAll(led []uint8){
-	this.m.Lock()
-	copy(this.led,led)
-	this.m.Unlock()
-}
-
-func (this *SpiLedArray) GetAll() []uint8 {
-	led := make([]uint8,16)
-	this.m.Lock()
-	copy(led, this.led)
-	this.m.Unlock()
-	return led
-}
-*/
-
 
 func (this *SpiLedArray) AllOff() {
 	for i:=uint8(0); i<16; i++ {
