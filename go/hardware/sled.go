@@ -16,6 +16,8 @@ type SpiLedArray struct {
 	pin           []uint8     // ピンの状態
 	m             *sync.Mutex // Mutex
 	sleep_timer   uint64
+	sleep_start   uint64
+	sleep_flag    bool
 }
 
 func NewSpiLedArray() (this *SpiLedArray, err error) {
@@ -25,6 +27,9 @@ func NewSpiLedArray() (this *SpiLedArray, err error) {
 	this.counter = make([]uint8, 16)
 	this.pin     = make([]uint8, 2)
 	this.m       = new(sync.Mutex)
+	this.sleep_timer = 0
+	this.sleep_start = 0
+	this.sleep_flag  = false
 	return
 }
 
@@ -38,14 +43,29 @@ func (this *SpiLedArray) Run() {
 	bcm2835.SpiSetChipSelectPolarity(BCM2835_SPI_CS0, LOW)
 
 	// 点滅
-	go this.blinker()
+	go this.blink_sleep()
 }
 
 
-func (this *SpiLedArray) blinker() {
+func (this *SpiLedArray) blink_sleep() {
 	for {
-		flag := false
 		this.m.Lock()
+
+		if this.sleep_timer > 0 {
+			this.sleep_timer--
+			if this.sleep_timer == 0 {
+				bcm2835.SpiTransfern([]byte{0,0})
+				this.sleep_flag = true
+			}
+		}
+
+		if this.sleep_flag {
+			this.m.Unlock()
+			time.Sleep(time.Millisecond * 10)
+			continue
+		}
+
+		flag := false
 		for i:=uint8(0); i<16; i++ {
 			if this.counter[i] == 0 {
 				continue
@@ -91,6 +111,10 @@ func (this *SpiLedArray) Set(led uint8, val uint8) {
 	c,p := this.l2p(led)
 	this.m.Lock()
 	this.led[led]=val
+
+	this.sleep_flag = false
+	this.sleep_timer = this.sleep_start
+
 	switch(val) {
 		case 0:
 			this.pin[c] &=^ ( 1 << p )
@@ -107,7 +131,12 @@ func (this *SpiLedArray) Set(led uint8, val uint8) {
 	this.m.Unlock()
 }
 
-func (this *SpiLedArray) SleepTimer(s int) {
+func (this *SpiLedArray) SleepTimer(s uint64) {
+	this.m.Lock()
+	this.sleep_flag  = false
+	this.sleep_start = s * 100
+	this.sleep_timer = this.sleep_start
+	this.m.Unlock()
 }
 
 func (this *SpiLedArray) AllOff() {
