@@ -94,7 +94,7 @@ func (this *Hardware) LedApp(v int) {
 	this.SLed.Set(SL_APP,uint8(v))
 }
 func (this *Hardware) LedGauge(k int, v int) {
-	this.SLed.Set(uint8(SL_GAUGE_1-1+k),uint8(v))
+	this.SLed.Set(uint8(SL_GAUGE_1+k),uint8(v))
 }
 func (this *Hardware) LedAllOff() {
 	this.SLed.AllOff()

@@ -11,7 +11,7 @@ import (
 )
 
 type SpiLedArray struct {
-	led           []uint8     // LED
+	led           []uint8     // LED(0: 消灯 1:点灯 >1:点滅)
 	counter       []uint8     // 点滅用カウンタ
 	pin           []uint8     // ピンの状態
 	m             *sync.Mutex // Mutex
@@ -23,7 +23,7 @@ func NewSpiLedArray() (this *SpiLedArray, err error) {
 	err = nil
 	this.led     = make([]uint8, 16)
 	this.counter = make([]uint8, 16)
-	this.pin     = make([]uint8, 8)
+	this.pin     = make([]uint8, 2)
 	this.m       = new(sync.Mutex)
 	return
 }
@@ -37,40 +37,49 @@ func (this *SpiLedArray) Run() {
 	bcm2835.SpiChipSelect(BCM2835_SPI_CS0)
 	bcm2835.SpiSetChipSelectPolarity(BCM2835_SPI_CS0, LOW)
 
-	go func() {
-		pv := make([]uint8,2)
-		for {
-			this.m.Lock()
-			for i:=uint8(0); i<=1; i++ { // 74HC595
-				for j:=uint8(0); j<8; j++ { // Pin
-					pn := j+8*i
-					switch(this.led[pn]) {
-						case 0:
-							this.pin[i] &=^ ( 1 << j )
-						case 1:
-							this.pin[i] |= ( 1 << j )
-						default:
-							if this.counter[pn] == this.led[pn] {
-								this.pin[i] ^= ( 1 << j )
-								this.counter[pn]=0
-							} else {
-								this.counter[pn]++
-							}
-					}
-				}
+	// 点滅
+	go this.blinker()
+}
+
+
+func (this *SpiLedArray) blinker() {
+	for {
+		flag := false
+		this.m.Lock()
+		for i:=uint8(0); i<16; i++ {
+			if this.counter[i] == 0 {
+				continue
 			}
-			this.m.Unlock()
-			if((pv[0] != this.pin[0]) || (pv[1] != this.pin[1])) {
-				this.m.Lock()
-				// バイトオーダを逆にする
-				bcm2835.SpiTransfern( []byte{ reverse8Bit(this.pin[0]), reverse8Bit(this.pin[1]) } )
-				pv[0] = this.pin[0]
-				pv[1] = this.pin[1]
-				this.m.Unlock()
+			flag = true
+			if this.led[i] == this.counter[i] {
+				c,p := this.l2p(i)
+				this.pin[c] ^= ( 1 << p )
+				this.counter[i]=1
 			}
-			time.Sleep(time.Millisecond * 10)
+			this.counter[i]++
 		}
-	}()
+		if flag {
+			this.update()
+		}
+		this.m.Unlock()
+		time.Sleep(time.Millisecond * 10)
+	}
+}
+
+func (this *SpiLedArray) l2p(led uint8)(chip uint8, value uint8) {
+	if led < 8 {
+		chip  = 0
+		value = led
+	} else {
+		chip   = 1
+		value = led-8
+	}
+	return chip,value
+}
+
+
+func (this *SpiLedArray) update() {
+	bcm2835.SpiTransfern( []byte{ reverse8Bit(this.pin[0]), reverse8Bit(this.pin[1]) } )
 }
 
 func (this *SpiLedArray) Finalize() {
@@ -78,9 +87,23 @@ func (this *SpiLedArray) Finalize() {
 	bcm2835.Close()
 }
 
-func (this *SpiLedArray) Set(ledPin uint8, value uint8) {
+func (this *SpiLedArray) Set(led uint8, val uint8) {
+	c,p := this.l2p(led)
 	this.m.Lock()
-	this.led[ledPin] = value
+	this.led[led]=val
+	switch(val) {
+		case 0:
+			this.pin[c] &=^ ( 1 << p )
+			this.counter[led]=0
+			this.update()
+		case 1:
+			this.pin[c] |=  ( 1 << p )
+			this.counter[led]=0
+			this.update()
+		default:
+			this.pin[c] |=  ( 1 << p )
+			this.counter[led]=val
+	}
 	this.m.Unlock()
 }
 
